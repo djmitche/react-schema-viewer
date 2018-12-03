@@ -93,6 +93,17 @@ export default class SchemaViewer extends React.PureComponent {
       return this.combination(schema, schema.allOf, name, 'All of', key);
     } else if (schema.oneOf) {
       return this.combination(schema, schema.oneOf, name, 'One of', key);
+    } else if (schema.$ref) {
+      return (
+        <tbody className={styles.joined} key={key}>
+          <NormalRow schema={schema} name={name} type='Reference' reqSet={reqSet}/>
+          <tr>
+            <td colSpan={4}>
+              {schema.$ref}
+            </td>
+          </tr>
+        </tbody>
+      );
     }
 
     const renderArray = () => (
