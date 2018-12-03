@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from 'react-dom';
 import { AppContainer } from 'react-hot-loader';
 import { Stories, Story, Props } from 'neutrino-preset-react-components/lib';
-import SchemaTable from './components/SchemaTable';
+import SchemaViewer from './components/SchemaViewer';
 import joi from 'joi-browser';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -27,7 +27,7 @@ const load = async () => {
     (
       <AppContainer>
         <Stories>
-          <Story component={SchemaTable} >
+          <Story component={SchemaViewer} >
             <Props name="Joi example" type='joi' schema={joiSchema} />
             <Props name="Task Definition" schema={taskDef} />
             <Props name="Hook Status" headerBackgroundColor={'rgba(73, 204, 144, 0.1)'} schema={hookStatus} />
@@ -42,7 +42,7 @@ const load = async () => {
 };
 
 if (module.hot) {
-  module.hot.accept('./components/SchemaTable', load);
+  module.hot.accept('./components/SchemaViewer', load);
 }
 
 load();
