@@ -11,6 +11,7 @@ const root = document.getElementById('root');
 const load = async () => {
   const hookStatus = require('../schemas/hook-status.json');
   const taskDef = require('../schemas/task.json');
+  const references = require('../schemas/references.json');
   const indexedTask = require('../schemas/indexed-task-response.json');
   const oneOf = await require('../schemas/post-artifact-request.json');
   const otherProps = require('../schemas/provisioner-response.json');
@@ -30,6 +31,8 @@ const load = async () => {
           <Story component={SchemaViewer} >
             <Props name="Joi example" type='joi' schema={joiSchema} />
             <Props name="Task Definition" schema={taskDef} />
+            <Props name="References" schema={references} />
+            <Props name="Subschema" schemas={[references, taskDef]} schema="task.json#/properties/priority" />
             <Props name="Hook Status" headerBackgroundColor={'rgba(73, 204, 144, 0.1)'} schema={hookStatus} />
             <Props name="Extra Properties" schema={otherProps} />
             <Props name="One of" schema={oneOf} />

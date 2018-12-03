@@ -3,6 +3,7 @@
   "title": "Task Definition Response",
   "additionalProperties": false,
   "$schema": "http://json-schema.org/draft-06/schema#",
+  "$id": "task.json",
   "required": [
     "provisionerId",
     "workerType",

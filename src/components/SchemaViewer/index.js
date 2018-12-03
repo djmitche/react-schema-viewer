@@ -1,17 +1,19 @@
 import React from 'react';
 import { Table } from 'react-bootstrap';
-import { object, bool, oneOf, string } from 'prop-types';
+import { arrayOf, object, bool, oneOf, oneOfType, string } from 'prop-types';
 import joiToJson from 'joi-to-json-schema';
 import Container from '../../widgets/Container';
 import NormalRow from './NormalRow';
+import Schemas from './Schemas';
 import styles from './styles.css';
 
 export default class SchemaViewer extends React.PureComponent {
   static propTypes = {
-    schema: object.isRequired,
+    schema: oneOfType([string, object]),
+    schemas: arrayOf(object),
     headerBackgroundColor: string,
     maxHeight: string,
-    type: string
+    type: oneOf(['joi', 'json']),
   };
 
   static defaultProps = {
@@ -20,15 +22,15 @@ export default class SchemaViewer extends React.PureComponent {
     type: 'json'
   };
 
-  objectTable(schema, name, reqSet, key) {
+  objectTable(schemas, schema, id, name, reqSet, key) {
     let res = [];
 
     if (schema.properties) {
       res = Object.entries(schema.properties).map(([name, prop]) => {
-        return this.schemaTable(prop, name, reqSet, `${key}-${name}`);
+        return this.schemaTable(schemas, `${id}/properties/${name}`, name, reqSet, `${key}-${name}`);
       });
 
-      if (schema.additionalProperties) {
+      if (schema.additionalProperties === true) {
         res.push((
           <tbody key={`${key}-additional`}>
             <tr>
@@ -40,7 +42,7 @@ export default class SchemaViewer extends React.PureComponent {
         ));
       }
     } else if (schema.additionalProperties){
-      res = this.schemaTable(schema.additionalProperties, null, '<string>', reqSet)
+      res = this.schemaTable(schemas, `${id}/additionalProperties`, 'additionalProperties', reqSet, `${key}-additional`);
     } else {
       res = (
         <tbody key={key}>
@@ -66,7 +68,8 @@ export default class SchemaViewer extends React.PureComponent {
     ) : res;
   }
 
-  combination(schema, things, name, type, key) {
+  combination(schemas, id, things, name, type, key) {
+    const schema = schemas.getSchema(id);
     return (
       <tbody key={`combination-${key}`} className={styles.joined}>
         <NormalRow schema={schema} name={name} type={type}/>
@@ -74,7 +77,7 @@ export default class SchemaViewer extends React.PureComponent {
           <td colSpan={4}>
             <Table bordered className={styles.childTable}>
               {things.map((thing, i) => {
-                return this.schemaTable(thing, thing.title, null, `${key}-${i}`);
+                return this.schemaTable(schemas, `${id}/${i}`, thing.title, null, `${key}-${i}`);
               })}
             </Table>
           </td>
@@ -83,27 +86,32 @@ export default class SchemaViewer extends React.PureComponent {
     );
   }
 
-  schemaTable(schema, name, reqSet, key) {
-    reqSet = new Set(schema.required || reqSet || []);
-    key = `${key}-${name}`;
-
-    if (schema.anyOf) {
-      return this.combination(schema, schema.anyOf, name, 'Any of', key);
-    } else if (schema.allOf) {
-      return this.combination(schema, schema.allOf, name, 'All of', key);
-    } else if (schema.oneOf) {
-      return this.combination(schema, schema.oneOf, name, 'One of', key);
-    } else if (schema.$ref) {
+  schemaTable(schemas, id, name, reqSet, key) {
+    const schema = schemas.getSchema(id);
+    if (!schema) {
       return (
         <tbody className={styles.joined} key={key}>
-          <NormalRow schema={schema} name={name} type='Reference' reqSet={reqSet}/>
           <tr>
             <td colSpan={4}>
-              {schema.$ref}
+              <em>Uknown Schema reference <tt>{id}</tt></em>
             </td>
           </tr>
         </tbody>
       );
+    }
+    reqSet = new Set(schema.required || reqSet || []);
+    // TODO: replace key with id?
+    key = `${key}-${name}`;
+
+    if (schema.anyOf) {
+      return this.combination(schemas, `${id}/anyOf`, schema.anyOf, name, 'Any of', key);
+    } else if (schema.allOf) {
+      return this.combination(schemas, `${id}/allOf`, schema.allOf, name, 'All of', key);
+    } else if (schema.oneOf) {
+      return this.combination(schemas, `${id}/oneOf`, schema.oneOf, name, 'One of', key);
+    } else if (schema.$ref) {
+      // TODO: evaluate the ref
+      return this.schemaTable(schemas, `${schema.$ref}`, 'Reference', null, `${key}-${schema.$ref}`);
     }
 
     const renderArray = () => (
@@ -113,7 +121,8 @@ export default class SchemaViewer extends React.PureComponent {
           <td colSpan={4}>
             <Table responsive>
               {this.schemaTable(
-                schema.items,
+                schemas,
+                `${id}/items`,
                 schema.items.title,
                 reqSet,
                 `${key}-${schema.items.title}`
@@ -123,7 +132,7 @@ export default class SchemaViewer extends React.PureComponent {
         </tr>
       </tbody>
     );
-    const renderObject = () => this.objectTable(schema, name, reqSet, key);
+    const renderObject = () => this.objectTable(schemas, schema, id, name, reqSet, key);
 
     switch (schema.type) {
       case 'object': return renderObject();
@@ -143,9 +152,25 @@ export default class SchemaViewer extends React.PureComponent {
   }
 
   render() {
-    const schema = this.props.type === 'joi' ?
-      joiToJson(this.props.schema) :
-      this.props.schema;
+    let schemaId = this.props.schema;
+    let schemas;
+    if (this.props.type === 'joi') {
+      if (this.props.schemas) {
+        throw new Error('`schemas` property cannot be used with joi');
+      }
+      schemas = new Schemas([joiToJson(this.props.schema)]);
+      schemaId = 'schema.json';
+    } else if (this.props.schemas) {
+      schemas = new Schemas(this.props.schemas);
+    } else {
+      schemas = new Schemas([this.props.schema]);
+      schemaId = this.props.schema.$id || 'schema.json';
+    }
+
+    const schema = schemas.getSchema(schemaId);
+    if (!schema) {
+      throw new Error(`No schema with $id ${schemaId}`);
+    }
 
     return (
       <Container
@@ -155,7 +180,7 @@ export default class SchemaViewer extends React.PureComponent {
         <Table
           responsive
           className={styles.parentTable}>
-          {this.schemaTable(schema, null, null, schema.id)}
+          {this.schemaTable(schemas, `${schemaId}#`, null, null, schema.id)}
         </Table>
       </Container>
     );

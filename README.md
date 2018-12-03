@@ -31,7 +31,10 @@ const SchemaViewer = require('react-schema-viewer').default;
 import SchemaViewer from 'react-schema-viewer';
 ```
 
-_Example: Rendering a JSON schema:_
+#### Rendering a JSON schema
+
+To render a JSON schema object, pass it in the `schema` property.
+
 ```js
 import React from 'react';
 import { render } from 'react-dom';
@@ -65,7 +68,47 @@ render((
   <img src="https://raw.githubusercontent.com/taskcluster/react-schema-viewer/master/json-joi.png" height="175">
 </p>
 
-_Example: Rendering a Joi object schema:_
+#### Rendering one of a set of JSON-schemas
+
+Given a set of schema objects, which may inter-reference one another, pass an array of the schemas in the `schemas` property and the id of the schema (or subschema, using JSON path) of the schema to render.
+
+```js
+import React from 'react';
+import { render } from 'react-dom';
+import SchemaViewer from 'react-schema-viewer';
+
+const personSchema = {
+  'title': 'Person',
+  '$id': 'person-schema.json#',
+  'type': 'object',
+  'properties': {
+    'firstName': {
+      'type': 'string'
+    },
+    'lastName': {
+      'type': 'string'
+    },
+    'age': {$ref: 'age-schema.json#'},
+  },
+  'required': ['firstName', 'lastName']
+};
+const ageSchema = {
+  'title': 'Age',
+  '$id': 'age-schema.json#',
+  'description': 'Age in years',
+  'type': 'integer',
+  'minimum': 0
+};
+
+render((
+  <SchemaViewer schemas={[personSchema, ageSchema]} schema='person-schema.json' />
+), document.getElementById('root'));
+```
+
+#### Rendering a Joi object schema
+
+To render a Joi object schema, pass it in the `schema` property and set `type="joi"`.
+
 ```js
 import React from 'react';
 import { render } from 'react-dom';

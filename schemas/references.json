@@ -1,0 +1,294 @@
+{
+  "description": "Reference of methods implemented by API",
+  "title": "API Reference File",
+  "$id": "api-reference-v0.json#",
+  "required": [
+    "apiVersion",
+    "$schema",
+    "title",
+    "description",
+    "serviceName",
+    "entries"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "scopeExpressionTemplateString": {
+      "pattern": "^[\\x20-\\x7e]*$",
+      "type": "string",
+      "description": "The most basic element of a scope expression",
+      "title": "Required-Scope"
+    },
+    "scopeExpressionTemplateIf": {
+      "description": "if/then objects will replace themselves with the contents of then if the `if` is true",
+      "title": "Conditional",
+      "additionalProperties": false,
+      "required": [
+        "if",
+        "then"
+      ],
+      "type": "object",
+      "properties": {
+        "then": {
+          "$ref": "#/definitions/scopeExpressionTemplate"
+        },
+        "if": {
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+          "type": "string"
+        },
+        "else": {
+          "$ref": "#/definitions/scopeExpressionTemplate"
+        }
+      }
+    },
+    "scopeExpressionTemplateAnyOf": {
+      "description": "AnyOf objects will evaluate to true if any subexpressions are true",
+      "title": "Disjunction",
+      "additionalProperties": false,
+      "required": [
+        "AnyOf"
+      ],
+      "type": "object",
+      "properties": {
+        "AnyOf": {
+          "items": {
+            "$ref": "#/definitions/scopeExpressionTemplate"
+          },
+          "type": "array"
+        }
+      }
+    },
+    "scopeExpressionTemplateAllOf": {
+      "description": "AllOf objects will evaluate to true if all subexpressions are true",
+      "title": "Conjunction",
+      "additionalProperties": false,
+      "required": [
+        "AllOf"
+      ],
+      "type": "object",
+      "properties": {
+        "AllOf": {
+          "items": {
+            "$ref": "#/definitions/scopeExpressionTemplate"
+          },
+          "type": "array"
+        }
+      }
+    },
+    "scopeExpressionTemplate": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/scopeExpressionTemplateString"
+        },
+        {
+          "$ref": "#/definitions/scopeExpressionTemplateAnyOf"
+        },
+        {
+          "$ref": "#/definitions/scopeExpressionTemplateAllOf"
+        },
+        {
+          "$ref": "#/definitions/scopeExpressionTemplateIf"
+        },
+        {
+          "description": "for/each/in objects will replace themselves with an array of basic scopes. They will be flattened into the array this object is a part of.",
+          "title": "For-All",
+          "additionalProperties": false,
+          "required": [
+            "for",
+            "each",
+            "in"
+          ],
+          "type": "object",
+          "properties": {
+            "each": {
+              "pattern": "^[\\x20-\\x7e]*$",
+              "type": "string"
+            },
+            "for": {
+              "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+              "type": "string"
+            },
+            "in": {
+              "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$schema": "/schemas/common/metadata-metaschema.json#",
+  "type": "object",
+  "properties": {
+    "serviceName": {
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "maxLength": 22,
+      "type": "string",
+      "description": "Name of service for automation. Will be consumed by client generators to produce URLs",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "API description in markdown"
+    },
+    "title": {
+      "type": "string",
+      "description": "API title in markdown"
+    },
+    "$schema": {
+      "title": "Schema Reference",
+      "type": "string",
+      "description": "Link to schema for this reference. That is a link to this very document. Typically used to identify what kind of reference this file is.",
+      "format": "uri"
+    },
+    "entries": {
+      "items": {
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "method",
+          "route",
+          "args",
+          "name",
+          "stability",
+          "title",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "scopes": {
+            "oneOf": [
+              {
+                "$ref": "#/definitions/scopeExpressionTemplateString"
+              },
+              {
+                "$ref": "#/definitions/scopeExpressionTemplateAnyOf"
+              },
+              {
+                "$ref": "#/definitions/scopeExpressionTemplateAllOf"
+              },
+              {
+                "$ref": "#/definitions/scopeExpressionTemplateIf"
+              }
+            ],
+            "description": "Scope expression template specifying required scopes for a method. Not provided if authentication isn't required."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the `function` this is a stable identifier for use in auto-generated client libraries"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of API entry"
+          },
+          "route": {
+            "type": "string",
+            "description": "Route for the call, note that arguments wrapped with brackets, like `/user/<userId>/` must be replaced."
+          },
+          "args": {
+            "items": {
+              "type": "string",
+              "description": "Argument that appears in `route` warpped in angle brackets. It must be replaced to call the function."
+            },
+            "type": "array",
+            "description": "Arguments from `route` that must be replaced, they'll appear wrapped in brackets inside `route`."
+          },
+          "stability": {
+            "enum": [
+              "deprecated",
+              "experimental",
+              "stable"
+            ],
+            "type": "string",
+            "description": "Stability level of the API",
+            "title": "Stability-Level"
+          },
+          "query": {
+            "items": {
+              "type": "string",
+              "description": "Optional query-string parameter"
+            },
+            "type": "array",
+            "description": "List of accepted query-string parameters, these are always optional."
+          },
+          "input": {
+            "type": "string",
+            "description": "JSON schema for input, if input is validated, otherwise not present. The value must be a relative URI, based on the service's schema location; that is, based at `<rootUrl>/schemas/<serviceName`."
+          },
+          "output": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "JSON schema for output, if output is validated, otherwise not present. The value must be a relative URI, based on the service's schema location; that is, based at `<rootUrl>/schemas/<serviceName`.",
+                "title": "Output Schema"
+              },
+              {
+                "enum": [
+                  "blob"
+                ],
+                "type": "string",
+                "description": "Output kind if not JSON matching a specific schema.",
+                "title": "Blob"
+              }
+            ],
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "function"
+            ],
+            "type": "string",
+            "description": "Type of entry, currently only `function`."
+          },
+          "method": {
+            "enum": [
+              "get",
+              "post",
+              "put",
+              "head",
+              "delete",
+              "options",
+              "trace",
+              "copy",
+              "lock",
+              "mkcol",
+              "move",
+              "purge",
+              "propfind",
+              "proppatch",
+              "unlock",
+              "report",
+              "mkactivity",
+              "checkout",
+              "merge",
+              "m-search",
+              "notify",
+              "subscribe",
+              "unsubscribe",
+              "patch",
+              "search"
+            ],
+            "type": "string",
+            "description": "HTTP method (verb) used to access the function"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description (ie. documentation) for the API entry"
+          }
+        },
+        "title": "API Entry"
+      },
+      "type": "array",
+      "description": "Array of methods in this reference",
+      "title": "Entries"
+    },
+    "apiVersion": {
+      "pattern": "^v[0-9]+$",
+      "type": "string",
+      "description": "Version of the API"
+    }
+  },
+  "metadata": {
+    "version": 0,
+    "name": "api"
+  }
+}
